@@ -5,6 +5,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { CheckCircle, XCircle } from "lucide-react";
 import axios from "axios";
 import { useToast } from "../hooks/useToast";
+import { useAuth } from "../hooks/useAuth";
 
 interface FormData {
   name: string;
@@ -23,7 +24,9 @@ interface Cause {
 }
 
 const Onboarding = () => {
+  const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+
   const location = useLocation();
 
   const userId = location.state?.userId;
@@ -138,8 +141,9 @@ const Onboarding = () => {
   };
 
   useEffect(() => {
-    fetchAvailableCauses();
-  }, []);
+    if (!isAuthenticated) navigate("/");
+    if (isAuthenticated) fetchAvailableCauses();
+  }, [isAuthenticated, navigate]);
   return (
     <motion.div
       initial={{ opacity: 0 }}

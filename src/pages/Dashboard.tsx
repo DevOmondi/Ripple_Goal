@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import WeeklyMessageCard from "../components/WeeklyMessageCard";
 import ProgressVisualization from "../components/ProgressVisualization";
 import CauseTracker from "../components/CauseTracker";
@@ -32,6 +33,9 @@ interface CommunityProgress {
 const Dashboard = () => {
   const { isAuthenticated } = useAuth();
   console.log("User authenticated:", isAuthenticated);
+  const navigate = useNavigate();
+
+  if (!isAuthenticated) navigate("/");
   const [weeklyMessage, setWeeklyMessage] = useState<WeeklyMessage | null>(
     null
   );
@@ -41,33 +45,37 @@ const Dashboard = () => {
 
   // Mock data initialization
   useEffect(() => {
+    if (!isAuthenticated) navigate("/");
     // Simulate API fetch
-    setTimeout(() => {
-      setWeeklyMessage({
-        id: 1,
-        title: "Your Momentum is Building!",
-        reflection: "You've logged 3 mindful moments last week - great start!",
-        guidance:
-          "This week, try incorporating 5 minutes of morning meditation",
-        collectiveImpact:
-          "Your efforts contributed to 15% of our community's goal to fund mental health resources!",
-      });
+    if (isAuthenticated) {
+      setTimeout(() => {
+        setWeeklyMessage({
+          id: 1,
+          title: "Your Momentum is Building!",
+          reflection:
+            "You've logged 3 mindful moments last week - great start!",
+          guidance:
+            "This week, try incorporating 5 minutes of morning meditation",
+          collectiveImpact:
+            "Your efforts contributed to 15% of our community's goal to fund mental health resources!",
+        });
 
-      setUserProgress({
-        goal: "Daily Mindfulness",
-        current: 3,
-        target: 21,
-        unit: "sessions",
-      });
+        setUserProgress({
+          goal: "Daily Mindfulness",
+          current: 3,
+          target: 21,
+          unit: "sessions",
+        });
 
-      setCommunityProgress({
-        cause: "Mental Health Support",
-        current: 34250,
-        target: 50000,
-        nextUnlock: "Fund a workshop for 100 students",
-      });
-    }, 800);
-  }, []);
+        setCommunityProgress({
+          cause: "Mental Health Support",
+          current: 34250,
+          target: 50000,
+          nextUnlock: "Fund a workshop for 100 students",
+        });
+      }, 800);
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleLogProgress = (amount: number) => {
     if (userProgress) {
