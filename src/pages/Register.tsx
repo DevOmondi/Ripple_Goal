@@ -6,6 +6,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { createUserWithEmailAndPassword, signInWithPopup } from "firebase/auth";
 import { auth, googleAuthProvider } from "../firebaseConfig";
 import { useToast } from "../hooks/useToast";
+import { useAuth } from "../hooks/useAuth";
 import { Github } from "lucide-react";
 
 // SVG Icons
@@ -44,6 +45,7 @@ interface FormData {
 const Register = () => {
   const { showSuccess, ToastContainer } = useToast();
   const navigate = useNavigate();
+  const { setIsAuthenticated } = useAuth();
 
   const [formData, setFormData] = useState<FormData>({
     name: "",
@@ -90,10 +92,11 @@ const Register = () => {
                 }
               )
               .then((response) => {
-                if (response && response.data) {
+                if (response.status === 201 && response.data.user_id) {
                   const userId = response.data.user_id;
                   // console.log("User added to database successfully");
                   const timeout = setTimeout(() => {
+                    setIsAuthenticated(true);
                     navigate("/onboarding", { state: { userId } });
                   }, 3000);
                   return () => clearTimeout(timeout);
@@ -151,10 +154,11 @@ const Register = () => {
               email: registeredUser.email || formData.email,
             })
             .then((response) => {
-              if (response && response.data) {
+              if (response.status === 201 && response.data.user_id) {
                 const userId = response.data.user_id;
                 // console.log("User added to database successfully");
                 const timeout = setTimeout(() => {
+                  setIsAuthenticated(true);
                   navigate("/onboarding", { state: { userId } });
                 }, 3000);
                 return () => clearTimeout(timeout);

@@ -7,6 +7,7 @@ interface ProgressData {
   unit?: string;
   goal?: string;
   cause?: string;
+  emoji?: string;
   nextUnlock?: string;
 }
 

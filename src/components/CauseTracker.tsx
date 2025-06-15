@@ -1,32 +1,100 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import type { FC } from "react";
+import type { Milestone } from "../../types/goalTypes";
 
 interface Progress {
   current: number;
   target: number;
   cause: string;
   nextUnlock?: string;
-}
-
-interface Milestone {
-  target: number;
-  unlock: string;
+  milestones: Milestone[];
 }
 
 interface CauseTrackerProps {
-  progress: Progress;
+  progress: Progress | null;
 }
 
 const CauseTracker: FC<CauseTrackerProps> = ({ progress }) => {
   const [expanded, setExpanded] = useState(false);
-  const percentage = Math.min(100, (progress.current / progress.target) * 100);
 
-  const milestones: Milestone[] = [
-    { target: 10000, unlock: "Plant 100 trees in urban areas" },
-    { target: 25000, unlock: "Fund a community garden" },
-    { target: 50000, unlock: "Sponsor a forest restoration project" },
-  ];
+  if (!progress) return null;
+
+  const isTargetReached = progress.current >= progress.target;
+
+  // Separate completed and upcoming milestones
+  const completedMilestones = progress.milestones?.filter(
+    (m) => progress.current >= m.targetValue
+  );
+  const upcomingMilestones = progress.milestones?.filter(
+    (m) => progress.current < m.targetValue
+  );
+
+  const getNextMilestone = (progress: Progress): Milestone | null => {
+    if (!progress.milestones?.length) return null;
+
+    // Sort milestones by targetValue and find the first unachieved one
+    const sortedMilestones = [...progress.milestones].sort(
+      (a, b) => a.targetValue - b.targetValue
+    );
+    return (
+      sortedMilestones.find((m) => progress.current < m.targetValue) || null
+    );
+  };
+
+  const renderCommunityImpact = (progress: Progress) => {
+    if (!progress) return null;
+
+    const nextMilestone = getNextMilestone(progress);
+    const currentTotal = progress.current;
+    const targetValue = nextMilestone?.targetValue || 0;
+    const isCompleted = currentTotal >= targetValue;
+
+    return (
+      <div className="pt-4 md:pt-6 border-t border-gray-100">
+        <h4 className="font-semibold text-sm md:text-base text-teal-700 mb-2 md:mb-3">
+          {progress.cause} Impact
+        </h4>
+
+        <div className="mb-3 md:mb-4">
+          <div className="flex justify-between text-xs md:text-sm mb-1">
+            <span>Community Progress</span>
+            <span>
+              {isCompleted ? targetValue : currentTotal} / {targetValue}
+            </span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2 md:h-2.5">
+            <div
+              className={`h-full rounded-full ${
+                isCompleted ? "bg-green-500" : "bg-teal-600"
+              }`}
+              style={{
+                width: `${Math.min(
+                  (currentTotal / (targetValue || 1)) * 100,
+                  100
+                )}%`,
+              }}
+            ></div>
+          </div>
+        </div>
+
+        {nextMilestone && (
+          <div className="bg-teal-50 p-3 md:p-4 rounded-lg">
+            <p className="text-xs md:text-sm font-medium text-teal-800">
+              Next Milestone: {nextMilestone.action}
+            </p>
+            <p className="text-xs text-teal-600 mt-1">
+              {isCompleted ? (
+                "Completed!"
+              ) : (
+                <>{targetValue - currentTotal} more points needed</>
+              )}
+            </p>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <motion.div
@@ -49,19 +117,7 @@ const CauseTracker: FC<CauseTrackerProps> = ({ progress }) => {
 
       <motion.div layout className="mb-4">
         <div className="flex justify-between text-sm mb-1">
-          <span>Community Progress</span>
-          <span>
-            {progress.current.toLocaleString()} /{" "}
-            {progress.target.toLocaleString()}
-          </span>
-        </div>
-        <div className="h-3 bg-amber-100 rounded-full overflow-hidden">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${percentage}%` }}
-            transition={{ duration: 1.5, ease: "easeOut" }}
-            className="h-full bg-gradient-to-r from-amber-400 to-orange-500"
-          />
+          {renderCommunityImpact(progress)}
         </div>
       </motion.div>
 
@@ -75,53 +131,90 @@ const CauseTracker: FC<CauseTrackerProps> = ({ progress }) => {
             transition={{ type: "spring", damping: 25 }}
             className="space-y-4"
           >
-            <div className="border-t border-amber-100 pt-4">
-              <h4 className="font-semibold text-amber-700 mb-3">
-                Upcoming Milestones
-              </h4>
-              <div className="space-y-3">
-                {milestones.map((milestone, i) => (
-                  <motion.div
-                    key={i}
-                    whileHover={{ x: 5 }}
-                    className={`flex items-start p-3 rounded-lg ${
-                      progress.current >= milestone.target
-                        ? "bg-amber-50 border border-amber-200"
-                        : "bg-gray-50"
-                    }`}
-                  >
-                    <span
-                      className={`text-lg mr-3 ${
-                        progress.current >= milestone.target
-                          ? "text-amber-500"
-                          : "text-gray-400"
-                      }`}
+            {/* Completed Milestones Section */}
+            {completedMilestones?.length > 0 && (
+              <div className="border-t border-green-100 pt-4">
+                <h4 className="font-semibold text-green-700 mb-3">
+                  Achieved Milestones
+                </h4>
+                <div className="space-y-3">
+                  {completedMilestones.map((milestone) => (
+                    <motion.div
+                      key={milestone.id}
+                      className="flex items-start p-3 rounded-lg bg-green-50 border border-green-200"
                     >
-                      {progress.current >= milestone.target ? "✅" : "🔜"}
-                    </span>
-                    <div>
-                      <p className="font-medium">
-                        {milestone.target.toLocaleString()} points
-                      </p>
-                      <p className="text-sm">{milestone.unlock}</p>
-                    </div>
-                  </motion.div>
-                ))}
+                      <span className="text-lg mr-3 text-green-500">✅</span>
+                      <div>
+                        <p className="font-medium text-green-800">
+                          {milestone.targetValue.toLocaleString()} points
+                        </p>
+                        <p className="text-sm text-green-700">
+                          {milestone.action}
+                        </p>
+                        <p className="text-xs text-green-600 mt-1">
+                          Completed!
+                        </p>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
+            {/* Upcoming Milestones Section */}
+            {upcomingMilestones?.length > 0 && (
+              <div className="border-t border-amber-100 pt-4">
+                <h4 className="font-semibold text-amber-700 mb-3">
+                  Upcoming Milestones
+                </h4>
+                <div className="space-y-3">
+                  {upcomingMilestones.map((milestone) => (
+                    <motion.div
+                      key={milestone.id}
+                      whileHover={{ x: 5 }}
+                      className="flex items-start p-3 rounded-lg bg-gray-50 border border-gray-200"
+                    >
+                      <span className="text-lg mr-3 text-amber-500">🔜</span>
+                      <div>
+                        <p className="font-medium">
+                          {milestone.targetValue.toLocaleString()} points
+                        </p>
+                        <p className="text-sm text-gray-700">
+                          {milestone.action}
+                        </p>
+                        <p className="text-xs text-amber-600 mt-1">
+                          {Math.max(
+                            0,
+                            milestone.targetValue - progress.current
+                          )}{" "}
+                          more to go
+                        </p>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Share Button */}
             <motion.div
               whileHover={{ scale: 1.02 }}
               className="bg-gradient-to-r from-amber-100 to-orange-100 p-4 rounded-lg text-center"
             >
               <p className="text-sm font-medium text-amber-800">
-                Invite friends to accelerate progress!
+                {isTargetReached
+                  ? "Amazing! You've reached the target!"
+                  : "Invite friends to accelerate progress!"}
               </p>
               <motion.button
                 whileTap={{ scale: 0.95 }}
-                className="mt-2 px-4 py-2 bg-amber-500 text-white rounded-full text-sm font-medium"
+                className={`mt-2 px-4 py-2 ${
+                  isTargetReached
+                    ? "bg-green-500 hover:bg-green-600"
+                    : "bg-amber-500 hover:bg-amber-600"
+                } text-white rounded-full text-sm font-medium transition-colors`}
               >
-                Share Challenge
+                {isTargetReached ? "Celebrate!" : "Share Challenge"}
               </motion.button>
             </motion.div>
           </motion.div>

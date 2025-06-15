@@ -6,6 +6,8 @@ import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
 import { auth, googleAuthProvider } from "../firebaseConfig";
 import { Github } from "lucide-react";
 import { useToast } from "../hooks/useToast";
+import { useAuth } from "../hooks/useAuth";
+import axios from "axios";
 
 // SVG Icons
 const GoogleIcon = () => (
@@ -34,12 +36,14 @@ const GoogleIcon = () => (
 );
 
 const Login = () => {
-  const { showSuccess, ToastContainer } = useToast();
+  const { showSuccess, showError, ToastContainer } = useToast();
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const navigate = useNavigate();
+
+  const { setIsAuthenticated } = useAuth();
 
   // Handle form submission
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -59,13 +63,28 @@ const Login = () => {
           const user = userCredential.user;
           console.log("Logged in user", user);
           if (user) {
-            showSuccess("Login successful!", {
-              details: `Welcome back ${user.displayName}!`,
-            });
-            const timeout = setTimeout(() => {
-              navigate("/onboarding");
-            }, 3000);
-            return () => clearTimeout(timeout);
+            // User is logged in
+            axios
+              .post(
+                `${import.meta.env.VITE_API_BASE_URL}/api/auth/login-user`,
+                { email: user.email }
+              )
+              .then((response) => {
+                if (response.status === 200 && response.data.user_id) {
+                  const userId = response.data.user_id;
+                  showSuccess("Login successful!", {
+                    details: `Welcome back ${user.displayName}!`,
+                  });
+                  const timeout = setTimeout(() => {
+                    setIsAuthenticated(true);
+                    navigate("/dashboard", { state: { userId } });
+                  }, 3000);
+                  return () => clearTimeout(timeout);
+                }
+              })
+              .catch((error) => {
+                showError("Login failed", { details: error.message });
+              });
           }
         })
         .catch((error) => {
@@ -84,15 +103,36 @@ const Login = () => {
   const handleGoogleSignIn = async () => {
     try {
       const response = await signInWithPopup(auth, googleAuthProvider);
-      if (response) {
+      if (response && response.user) {
         const registeredUser = response.user;
+        if (registeredUser && registeredUser.email) {
+          await axios
+            .post(`${import.meta.env.VITE_API_BASE_URL}/api/auth/login-user`, {
+              email: registeredUser.email,
+            })
+            .then((response) => {
+              if (response.status === 200 && response.data.user_id) {
+                const userId = response.data.user_id;
+                showSuccess("Login successful!", {
+                  details: `Welcome back ${registeredUser.displayName}!`,
+                });
+                const timeout = setTimeout(() => {
+                  setIsAuthenticated(true);
+                  navigate("/dashboard", { state: { userId } });
+                }, 3000);
+                return () => clearTimeout(timeout);
+              }
+              if (response && response.status === 500) {
+                showError("Login failed", { details: response.data.error });
+              }
+            })
+            .catch((error) => {
+              showError("Login failed", { details: error.message });
+            });
+        }
         showSuccess("Google sign in successful!", {
           details: `Welcome back ${registeredUser.displayName}! Nice to see you again😊.`,
         });
-        const timeout = setTimeout(() => {
-          navigate("/onboarding");
-        }, 4000);
-        return () => clearTimeout(timeout);
       }
     } catch (error) {
       setError((error as Error).message || "Login failed");
@@ -223,7 +263,7 @@ const Login = () => {
                 </div>
 
                 <Link
-                  to="/forgot-password"
+                  to="/"
                   className="text-sm text-emerald-600 hover:text-amber-600"
                 >
                   Forgot password?
@@ -264,7 +304,7 @@ const Login = () => {
             <p className="text-gray-600 text-sm">
               New to Ripple Goal?{" "}
               <Link
-                to="/register"
+                to="/"
                 className="font-medium text-emerald-600 hover:text-amber-600"
               >
                 Create an account

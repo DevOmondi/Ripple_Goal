@@ -50,7 +50,7 @@ const Onboarding = () => {
       const response = await axios.get(
         `${import.meta.env.VITE_API_BASE_URL}/api/causes`
       );
-      console.log("Available causes response:", response);
+      // console.log("Available causes response:", response);
       setCauses(response.data.causes);
     } catch (error) {
       console.error("Error fetching available causes:", error);
@@ -108,7 +108,7 @@ const Onboarding = () => {
         );
 
         if (response.status === 201) {
-          navigate("/");
+          navigate("/dashboard", { state: { userId: userId } });
         }
       } catch (error) {
         console.error("Error creating goal:", error);
